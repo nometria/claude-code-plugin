@@ -1,0 +1,52 @@
+{
+  "name": "nometria",
+  "displayName": "Nometria — Deploy to Any Cloud",
+  "description": "Deploy, manage, and monitor apps from any AI coding tool. 20 MCP tools for production deployments, instance management, GitHub sync, env vars, custom domains, and AI security scans.",
+  "version": "0.1.0",
+  "author": {
+    "name": "Nometria",
+    "url": "https://nometria.com"
+  },
+  "license": "MIT",
+  "repository": "https://github.com/nometria/claude-code-plugin",
+  "homepage": "https://docs.nometria.com/cli/mcp-server",
+  "transport": {
+    "type": "stdio",
+    "command": "npx",
+    "args": ["-y", "@nometria-ai/claude-code"]
+  },
+  "worksWith": [
+    "claude-code",
+    "claude-desktop",
+    "cursor",
+    "continue"
+  ],
+  "categories": [
+    "deployment",
+    "cloud-infrastructure",
+    "devops"
+  ],
+  "tools": [
+    { "name": "nometria_login", "description": "Save your Nometria API key or get sign-in instructions" },
+    { "name": "nometria_deploy", "description": "Deploy the current project to production" },
+    { "name": "nometria_preview", "description": "Create a free 2-hour staging preview" },
+    { "name": "nometria_status", "description": "Check deployment status of an app" },
+    { "name": "nometria_logs", "description": "View deployment logs for an app" },
+    { "name": "nometria_list_apps", "description": "List all your deployed apps" },
+    { "name": "nometria_init", "description": "Initialize nometria.json config in the project" },
+    { "name": "nometria_github_connect", "description": "Connect GitHub for auto-deploy on push" },
+    { "name": "nometria_github_status", "description": "Check if GitHub is connected for an app" },
+    { "name": "nometria_github_repos", "description": "List GitHub repos connected to your account" },
+    { "name": "nometria_github_push", "description": "Push local changes to connected GitHub repo" },
+    { "name": "nometria_start", "description": "Start a stopped instance" },
+    { "name": "nometria_stop", "description": "Stop a running instance" },
+    { "name": "nometria_terminate", "description": "Permanently terminate an instance" },
+    { "name": "nometria_upgrade", "description": "Resize instance (2gb/4gb/8gb/16gb)" },
+    { "name": "nometria_domain_add", "description": "Add a custom domain to your app" },
+    { "name": "nometria_env_set", "description": "Set environment variables on your app" },
+    { "name": "nometria_env_list", "description": "List environment variable keys for your app" },
+    { "name": "nometria_scan", "description": "Run AI security and performance scan" },
+    { "name": "nometria_setup", "description": "Generate AI tool config files for all IDEs" },
+    { "name": "nometria_rollback", "description": "Roll back to a previous deployment version" }
+  ]
+}

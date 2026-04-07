@@ -1,0 +1,39 @@
+{
+  "name": "nometria",
+  "version": "0.1.0",
+  "displayName": "Nometria — Deploy to Any Cloud",
+  "description": "Deploy, manage, and monitor apps from Claude Code. One command to production.",
+  "author": {
+    "name": "Nometria",
+    "email": "hello@nometria.com",
+    "url": "https://nometria.com"
+  },
+  "license": "MIT",
+  "repository": "https://github.com/nometria/claude-code-plugin",
+  "homepage": "https://docs.nometria.com/cli/install-ai-tools",
+  "keywords": [
+    "deploy",
+    "cloud",
+    "aws",
+    "hosting",
+    "production",
+    "preview",
+    "vibe-coding",
+    "mcp"
+  ],
+  "categories": [
+    "deployment",
+    "cloud",
+    "devops"
+  ],
+  "engines": {
+    "claude-code": ">=1.0.0"
+  },
+  "skills": [
+    "skills/deploy/SKILL.md",
+    "skills/preview/SKILL.md",
+    "skills/status/SKILL.md",
+    "skills/login/SKILL.md"
+  ],
+  "mcp": ".mcp.json"
+}
