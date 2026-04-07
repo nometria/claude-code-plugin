@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "nometria": {
+      "command": "npx",
+      "args": ["-y", "@nometria-ai/claude-code"],
+      "env": {}
+    }
+  }
+}

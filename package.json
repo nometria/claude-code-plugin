@@ -1,7 +1,7 @@
 {
   "name": "@nometria-ai/claude-code",
   "mcpName": "io.github.nometria/deploy",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "description": "Deploy any project to any cloud from Claude Code. MCP server + slash commands.",
   "type": "module",
   "bin": "src/mcp-server.js",
