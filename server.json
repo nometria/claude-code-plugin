@@ -1,0 +1,29 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "io.github.nometria/deploy",
+  "description": "Deploy any app to any cloud. 20 tools for deployments, previews, and management.",
+  "repository": {
+    "url": "https://github.com/nometria/claude-code-plugin",
+    "source": "github"
+  },
+  "version": "1.0.0",
+  "packages": [
+    {
+      "registryType": "npm",
+      "identifier": "@nometria-ai/claude-code",
+      "version": "0.2.1",
+      "transport": {
+        "type": "stdio"
+      },
+      "environmentVariables": [
+        {
+          "description": "Your Nometria API key (get one at https://nometria.com/settings/api-keys)",
+          "isRequired": false,
+          "format": "string",
+          "isSecret": true,
+          "name": "NOMETRIA_API_KEY"
+        }
+      ]
+    }
+  ]
+}

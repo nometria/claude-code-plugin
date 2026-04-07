@@ -1,0 +1,68 @@
+name: nometria
+version: 0.1.0
+description: Deploy, manage, and monitor apps from any AI coding tool. 20 tools for production deployments, instance management, GitHub sync, env vars, custom domains, and AI security scans.
+author: nometria
+license: MIT
+homepage: https://nometria.com
+repository: https://github.com/nometria/claude-code-plugin
+
+startCommand:
+  type: stdio
+  configSchema:
+    type: object
+    properties:
+      NOMETRIA_API_KEY:
+        type: string
+        description: "Your Nometria API key (get one at https://nometria.com/settings/api-keys)"
+    required: []
+  commandFunction:
+    |-
+    (config) => ({
+      command: 'npx',
+      args: ['-y', '@nometria-ai/claude-code'],
+      env: {
+        NOMETRIA_API_KEY: config.NOMETRIA_API_KEY || ''
+      }
+    })
+
+tools:
+  - name: list_apps
+    description: List all your Nometria apps and their deployment status
+  - name: check_status
+    description: Check the deployment status of a specific app
+  - name: deploy_to_production
+    description: Deploy an app to production (new instance)
+  - name: resync_hosting
+    description: Push latest code to a running instance
+  - name: deploy_preview
+    description: Create a free staging preview (2hr expiry)
+  - name: start_instance
+    description: Start a stopped instance
+  - name: stop_instance
+    description: Stop a running instance
+  - name: terminate_instance
+    description: Permanently delete an instance
+  - name: upgrade_instance
+    description: Change instance size (2gb/4gb/8gb/16gb)
+  - name: set_env_vars
+    description: Set environment variables on a deployed app
+  - name: list_env_vars
+    description: List current environment variables
+  - name: add_custom_domain
+    description: Add a custom domain to your app
+  - name: run_ai_scan
+    description: Run an AI security and performance scan
+  - name: push_github_changes
+    description: Push code changes to GitHub
+  - name: connect_github
+    description: Connect a GitHub repository for auto-deploy
+  - name: list_github_repos
+    description: List available GitHub repositories
+  - name: download_zip
+    description: Download app source code as ZIP
+  - name: get_logs
+    description: View deployment logs
+  - name: cli_upload
+    description: Get a presigned URL for uploading app bundles
+  - name: cli_deploy
+    description: Deploy an uploaded bundle to the cloud
