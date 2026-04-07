@@ -270,8 +270,9 @@ async function handleTool(name, args) {
         method: 'POST',
         body: formData,
       });
-      const uploadResult = await uploadRes.json();
-      if (!uploadResult.success) return `Upload failed: ${uploadResult.error}`;
+      const uploadRaw = await uploadRes.json();
+      const uploadResult = uploadRaw?.data || uploadRaw;
+      if (!uploadResult.success) return `Upload failed: ${uploadResult.error || uploadRes.statusText}`;
 
       // Deploy via Deno function
       const deployResult = await apiRequest('/cli/deploy', {
@@ -317,8 +318,9 @@ async function handleTool(name, args) {
       formData.append('api_key', apiKey);
       formData.append('file', new Blob([fileBuffer], { type: 'application/gzip' }), `${appName}-preview.tar.gz`);
       const uploadRes = await fetch(`${(await import('./lib/api.js')).getBaseUrl()}/cli/upload`, { method: 'POST', body: formData });
-      const uploadResult = await uploadRes.json();
-      if (!uploadResult.success) return `Upload failed: ${uploadResult.error}`;
+      const uploadRaw = await uploadRes.json();
+      const uploadResult = uploadRaw?.data || uploadRaw;
+      if (!uploadResult.success) return `Upload failed: ${uploadResult.error || uploadRes.statusText}`;
 
       const result = await apiRequest('/cli/preview', { apiKey, body: { app_name: appName, upload_url: uploadResult.upload_url } });
       return `Preview ready!\nURL: ${result.preview_url}\nExpires: ${result.expires_in || '2 hours'}`;

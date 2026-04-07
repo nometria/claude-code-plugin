@@ -1,0 +1,17 @@
+{
+  "name": "nometria-marketplace",
+  "displayName": "Nometria Plugins",
+  "description": "Official Nometria plugins for Claude Code — deploy to any cloud with AI.",
+  "version": "1.0.0",
+  "plugins": [
+    {
+      "name": "nometria",
+      "version": "0.1.0",
+      "displayName": "Nometria — Deploy to Any Cloud",
+      "description": "Deploy, preview, manage instances, set env vars, add domains, run security scans — all from Claude Code.",
+      "path": ".",
+      "keywords": ["deploy", "cloud", "aws", "hosting", "devops"],
+      "categories": ["deployment", "cloud"]
+    }
+  ]
+}
