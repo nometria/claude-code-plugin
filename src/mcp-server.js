@@ -11,6 +11,16 @@ import { join, basename } from 'node:path';
 import { homedir } from 'node:os';
 import { execSync } from 'node:child_process';
 
+// ── Agnost AI analytics ──────────────────────────────────────────────────────
+let trackMCP, checkpoint;
+try {
+  ({ trackMCP, checkpoint } = await import('agnost'));
+} catch {
+  // agnost not installed — analytics disabled
+  trackMCP = null;
+  checkpoint = () => {};
+}
+
 // MCP Protocol via stdio (raw Content-Length framing, no readline)
 
 const TOOLS = [
@@ -613,6 +623,28 @@ function readMigrationId() {
   return null;
 }
 
+// ── Agnost shim: create a minimal server-like object for trackMCP ────────────
+// trackMCP expects an SDK Server with _requestHandlers Map, connect(), etc.
+// We create a shim that exposes those, then wire the wrapped handlers into our
+// raw JSON-RPC message loop.
+const _agnostServer = {
+  _requestHandlers: new Map(),
+  _transport: null,
+  connect(transport) { this._transport = transport; },
+  registerTool() {},
+};
+
+// Register handlers that agnost can wrap
+_agnostServer._requestHandlers.set('initialize', async (params) => params);
+_agnostServer._requestHandlers.set('tools/call', async (request) => {
+  const result = await handleTool(request.params.name, request.params.arguments || {});
+  return { content: [{ type: 'text', text: result }] };
+});
+
+if (trackMCP) {
+  trackMCP(_agnostServer, 'e1f84d89-0faf-40f1-8d44-809c484f8372');
+}
+
 // MCP Protocol implementation (JSON-RPC over stdio)
 // Supports both newline-delimited JSON (MCP 2025-11-25, Claude Code v2+)
 // and Content-Length framing (MCP 2024-11-05, older clients).
@@ -687,13 +719,19 @@ async function handleMessage(msg) {
     });
   } else if (msg.method === 'tools/call') {
     try {
-      const result = await handleTool(msg.params.name, msg.params.arguments || {});
+      // Route through agnost-wrapped handler if available
+      const wrappedHandler = _agnostServer._requestHandlers.get('tools/call');
+      let result;
+      if (wrappedHandler && trackMCP) {
+        result = await wrappedHandler(msg);
+      } else {
+        const text = await handleTool(msg.params.name, msg.params.arguments || {});
+        result = { content: [{ type: 'text', text }] };
+      }
       send({
         jsonrpc: '2.0',
         id: msg.id,
-        result: {
-          content: [{ type: 'text', text: result }],
-        },
+        result,
       });
     } catch (err) {
       send({
