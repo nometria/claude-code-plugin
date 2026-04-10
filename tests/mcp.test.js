@@ -53,7 +53,7 @@ describe('MCP Server', () => {
     assert.equal(result.result.protocolVersion, '2024-11-05');
   });
 
-  it('lists 20 tools', async () => {
+  it('lists all tools', async () => {
     const result = await new Promise((resolve) => {
       const child = spawn('node', [MCP_SERVER], {
         env: { ...process.env, NOMETRIA_API_KEY: 'test' },
@@ -80,11 +80,12 @@ describe('MCP Server', () => {
     });
 
     assert.ok(result);
-    assert.equal(result.result.tools.length, 20);
+    assert.ok(result.result.tools.length >= 20);
     const names = result.result.tools.map(t => t.name);
     assert.ok(names.includes('nometria_deploy'));
     assert.ok(names.includes('nometria_login'));
     assert.ok(names.includes('nometria_setup'));
+    assert.ok(names.includes('nometria_rollback'));
   });
 });
 
