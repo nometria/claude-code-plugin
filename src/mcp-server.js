@@ -16,7 +16,7 @@ let trackMCP, checkpoint;
 try {
   ({ trackMCP, checkpoint } = await import('agnost'));
 } catch {
-  // agnost not installed — analytics disabled
+  // agnost not installed - analytics disabled
   trackMCP = null;
   checkpoint = () => {};
 }
@@ -24,9 +24,11 @@ try {
 // MCP Protocol via stdio (raw Content-Length framing, no readline)
 
 const TOOLS = [
+  // ── Authentication ──────────────────────────────────────────────────────────
   {
     name: 'nometria_login',
-    description: 'Save your Nometria API key. If no key provided, instructs the user to run `nom login` for browser sign-in or visit https://nometria.com/settings/api-keys',
+    description: 'Authenticate with Nometria. Provide an API key (starts with nometria_sk_) or omit to get sign-in instructions. Must be called before any other tool if not already authenticated. Keys are available at https://nometria.com/settings/api-keys.',
+    annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true },
     inputSchema: {
       type: 'object',
       properties: {
@@ -34,9 +36,11 @@ const TOOLS = [
       },
     },
   },
+  // ── Deployment ──────────────────────────────────────────────────────────────
   {
     name: 'nometria_deploy',
-    description: 'Deploy the current project to production. Builds, uploads, and deploys to your chosen cloud.',
+    description: 'Deploy the current project to production. Builds locally, uploads the archive, and triggers cloud deployment. For testing changes first, use nometria_preview instead. Requires nometria.json (use nometria_init to create). Supports AWS, GCP, Azure, DigitalOcean, Hetzner, and Vercel.',
+    annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true },
     inputSchema: {
       type: 'object',
       properties: {
@@ -46,7 +50,8 @@ const TOOLS = [
   },
   {
     name: 'nometria_preview',
-    description: 'Create a temporary staging preview of the project. Free, expires in 2 hours.',
+    description: 'Create a free temporary staging preview. Deploys to an isolated sandbox that expires in 2 hours. Use this to test before deploying to production with nometria_deploy. No billing - previews are always free.',
+    annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true },
     inputSchema: {
       type: 'object',
       properties: {
@@ -55,33 +60,62 @@ const TOOLS = [
     },
   },
   {
-    name: 'nometria_status',
-    description: 'Check the deployment status of an app.',
+    name: 'nometria_rollback',
+    description: 'Roll back to a previous deployment version. If no deployment_id is specified, rolls back to the immediately previous version. Use nometria_status to check current state after rollback.',
+    annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true },
     inputSchema: {
       type: 'object',
       properties: {
-        app_id: { type: 'string', description: 'App ID or name to check' },
+        app_id: { type: 'string', description: 'App ID (reads from nometria.json if omitted)' },
+        deployment_id: { type: 'string', description: 'Target deployment ID to roll back to (omit for previous)' },
+      },
+    },
+  },
+  // ── Monitoring ──────────────────────────────────────────────────────────────
+  {
+    name: 'nometria_status',
+    description: 'Check deployment status, instance state, URL, and IP address for an app. Use this to verify a deploy completed successfully or to check if an instance is running.',
+    annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true },
+    inputSchema: {
+      type: 'object',
+      properties: {
+        app_id: { type: 'string', description: 'App ID or name (reads from nometria.json if omitted)' },
       },
     },
   },
   {
     name: 'nometria_logs',
-    description: 'View deployment logs for an app.',
+    description: 'View recent deployment and application logs. Use this to debug deploy failures, check runtime errors, or monitor app behavior.',
+    annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true },
     inputSchema: {
       type: 'object',
       properties: {
-        app_id: { type: 'string', description: 'App ID or name' },
+        app_id: { type: 'string', description: 'App ID or name (reads from nometria.json if omitted)' },
       },
     },
   },
   {
     name: 'nometria_list_apps',
-    description: 'List all your deployed apps.',
+    description: 'List all deployed apps with their status, platform, and payment info. Use this to find app IDs or get an overview of all deployments.',
+    annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true },
     inputSchema: { type: 'object', properties: {} },
   },
   {
+    name: 'nometria_info',
+    description: 'Get comprehensive project context in a single call: app name, framework, platform, status, URL, instance type, services, env var keys, GitHub connection, and estimated cost. Use this first to understand the current state before taking any action.',
+    annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true },
+    inputSchema: {
+      type: 'object',
+      properties: {
+        app_id: { type: 'string', description: 'App ID (reads from nometria.json if omitted)' },
+      },
+    },
+  },
+  // ── Configuration ───────────────────────────────────────────────────────────
+  {
     name: 'nometria_init',
-    description: 'Initialize a nometria.json config file in the project directory.',
+    description: 'Initialize a nometria.json config file. Auto-detects framework (Next.js, Vite, Remix, Astro, SvelteKit, Nuxt, Node.js, Python, Deno), build commands, and multi-service architecture. Run this before first deploy.',
+    annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true },
     inputSchema: {
       type: 'object',
       properties: {
@@ -91,83 +125,257 @@ const TOOLS = [
       },
     },
   },
-  // GitHub
+  {
+    name: 'nometria_setup',
+    description: 'Generate AI tool config files so every IDE and agent knows how to deploy this project. Creates: .cursor/rules, .clinerules, .windsurfrules, CLAUDE.md, .github/copilot-instructions.md, GitHub Action workflow, and Continue.dev config.',
+    annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true },
+    inputSchema: { type: 'object', properties: { directory: { type: 'string', description: 'Project directory (default: current dir)' } } },
+  },
+  // ── GitHub Integration ──────────────────────────────────────────────────────
   {
     name: 'nometria_github_connect',
-    description: 'Connect GitHub to your app for auto-deploy on push. Requires browser — instructs user to run nom github connect.',
-    inputSchema: { type: 'object', properties: { app_id: { type: 'string' } } },
+    description: 'Connect GitHub for auto-deploy on push. Requires browser - instructs the user to run `nom github connect` in their terminal for OAuth authorization.',
+    annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true },
+    inputSchema: { type: 'object', properties: { app_id: { type: 'string', description: 'App ID (reads from nometria.json if omitted)' } } },
   },
   {
     name: 'nometria_github_status',
-    description: 'Check if GitHub is connected for an app.',
-    inputSchema: { type: 'object', properties: { app_id: { type: 'string' } } },
+    description: 'Check if GitHub auto-deploy is connected for this app and which GitHub user is linked.',
+    annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true },
+    inputSchema: { type: 'object', properties: { app_id: { type: 'string', description: 'App ID (reads from nometria.json if omitted)' } } },
   },
   {
     name: 'nometria_github_repos',
-    description: 'List GitHub repos connected to your account.',
-    inputSchema: { type: 'object', properties: { app_id: { type: 'string' } } },
+    description: 'List GitHub repos connected to your Nometria account. Useful for verifying which repo is linked to an app.',
+    annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true },
+    inputSchema: { type: 'object', properties: { app_id: { type: 'string', description: 'App ID (reads from nometria.json if omitted)' } } },
   },
   {
     name: 'nometria_github_push',
-    description: 'Push local changes to connected GitHub repo.',
-    inputSchema: { type: 'object', properties: { app_id: { type: 'string' }, commit_message: { type: 'string' } } },
+    description: 'Push local code changes to the connected GitHub repo. Triggers auto-deploy if GitHub integration is active.',
+    annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false },
+    inputSchema: { type: 'object', properties: { app_id: { type: 'string', description: 'App ID (reads from nometria.json if omitted)' }, commit_message: { type: 'string', description: 'Git commit message' } } },
   },
-  // Instance management
+  // ── Instance Management ─────────────────────────────────────────────────────
   {
     name: 'nometria_start',
-    description: 'Start a stopped instance.',
-    inputSchema: { type: 'object', properties: { app_id: { type: 'string' } } },
+    description: 'Start a stopped instance. Use this after nometria_stop to resume the app. Instance retains all data and configuration.',
+    annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true },
+    inputSchema: { type: 'object', properties: { app_id: { type: 'string', description: 'App ID (reads from nometria.json if omitted)' } } },
   },
   {
     name: 'nometria_stop',
-    description: 'Stop a running instance.',
-    inputSchema: { type: 'object', properties: { app_id: { type: 'string' } } },
+    description: 'Stop a running instance to save costs. The instance is paused - data is preserved. Use nometria_start to resume. Billing pauses while stopped.',
+    annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true },
+    inputSchema: { type: 'object', properties: { app_id: { type: 'string', description: 'App ID (reads from nometria.json if omitted)' } } },
   },
   {
     name: 'nometria_terminate',
-    description: 'Permanently terminate an instance. This is destructive.',
-    inputSchema: { type: 'object', properties: { app_id: { type: 'string' } } },
+    description: 'PERMANENTLY delete an instance and all its data. This is irreversible - the app, database, and files are destroyed. Use nometria_stop instead if you want to pause temporarily.',
+    annotations: { readOnlyHint: false, destructiveHint: true, idempotentHint: false },
+    inputSchema: { type: 'object', properties: { app_id: { type: 'string', description: 'App ID (reads from nometria.json if omitted)' } } },
   },
   {
     name: 'nometria_upgrade',
-    description: 'Upgrade instance size (2gb, 4gb, 8gb, 16gb).',
-    inputSchema: { type: 'object', properties: { app_id: { type: 'string' }, instance_type: { type: 'string', description: '2gb | 4gb | 8gb | 16gb' } }, required: ['instance_type'] },
+    description: 'Resize an instance. Available sizes: 2gb ($39/mo), 4gb ($49/mo), 8gb ($79/mo), 16gb ($129/mo). The instance restarts during upgrade. No data loss.',
+    annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true },
+    inputSchema: { type: 'object', properties: { app_id: { type: 'string', description: 'App ID (reads from nometria.json if omitted)' }, instance_type: { type: 'string', description: '2gb | 4gb | 8gb | 16gb' } }, required: ['instance_type'] },
   },
-  // Domains, env, scan
+  // ── Domains & Environment ───────────────────────────────────────────────────
   {
     name: 'nometria_domain_add',
-    description: 'Add a custom domain to your app.',
-    inputSchema: { type: 'object', properties: { app_id: { type: 'string' }, custom_domain: { type: 'string' } }, required: ['custom_domain'] },
+    description: 'Add a custom domain to your app with automatic SSL/TLS certificate provisioning via Let\'s Encrypt. Point your domain\'s DNS to the instance IP first, then add it here.',
+    annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true },
+    inputSchema: { type: 'object', properties: { app_id: { type: 'string', description: 'App ID (reads from nometria.json if omitted)' }, custom_domain: { type: 'string', description: 'Domain name (e.g., app.example.com)' } }, required: ['custom_domain'] },
   },
   {
     name: 'nometria_env_set',
-    description: 'Set environment variables on your app.',
-    inputSchema: { type: 'object', properties: { app_id: { type: 'string' }, vars: { type: 'object', description: 'Key-value pairs to set' } }, required: ['vars'] },
+    description: 'Set environment variables on the deployed instance. Variables are injected into the app process and persisted across resyncs. Use for API keys, database URLs, feature flags.',
+    annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true },
+    inputSchema: { type: 'object', properties: { app_id: { type: 'string', description: 'App ID (reads from nometria.json if omitted)' }, vars: { type: 'object', description: 'Key-value pairs to set, e.g. {"DATABASE_URL": "postgres://...", "API_KEY": "sk-..."}' } }, required: ['vars'] },
   },
   {
     name: 'nometria_env_list',
-    description: 'List environment variable keys for your app.',
-    inputSchema: { type: 'object', properties: { app_id: { type: 'string' } } },
+    description: 'List all environment variable keys set on the deployed instance. Returns key names only (not values) for security.',
+    annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true },
+    inputSchema: { type: 'object', properties: { app_id: { type: 'string', description: 'App ID (reads from nometria.json if omitted)' } } },
   },
+  // ── Security & Scanning ─────────────────────────────────────────────────────
   {
     name: 'nometria_scan',
-    description: 'Run an AI security and performance scan on your app.',
-    inputSchema: { type: 'object', properties: { app_id: { type: 'string' } } },
+    description: 'Run an AI-powered security and performance audit. Returns scores (0-100) for security, performance, and code quality, plus actionable issues with severity levels and fix suggestions.',
+    annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true },
+    inputSchema: { type: 'object', properties: { app_id: { type: 'string', description: 'App ID (reads from nometria.json if omitted)' } } },
   },
+  // ── Backend Services (Database, Cache, Storage) ─────────────────────────────
   {
-    name: 'nometria_setup',
-    description: 'Generate AI tool config files (.cursor/rules, .clinerules, .windsurfrules, CLAUDE.md, .github/copilot-instructions.md, GitHub Action, Continue.dev config) so every AI coding tool knows how to deploy this project.',
-    inputSchema: { type: 'object', properties: { directory: { type: 'string', description: 'Project directory (default: current dir)' } } },
-  },
-  {
-    name: 'nometria_rollback',
-    description: 'Roll back to a previous deployment version.',
+    name: 'nometria_services_add',
+    description: 'Add a backend service (database, cache, or storage) to your deployed instance. Provisions a Docker container with auto-generated credentials and injects the connection string as an environment variable. Available: postgres, mysql, mongodb, redis, minio.',
+    annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true },
     inputSchema: {
       type: 'object',
       properties: {
-        app_id: { type: 'string', description: 'App ID' },
-        deployment_id: { type: 'string', description: 'Target deployment ID to roll back to (omit for previous)' },
+        app_id: { type: 'string', description: 'App ID (reads from nometria.json if omitted)' },
+        service: { type: 'string', enum: ['postgres', 'mysql', 'mongodb', 'redis', 'minio'], description: 'Service type to provision' },
       },
+      required: ['service'],
+    },
+  },
+  {
+    name: 'nometria_services_list',
+    description: 'List all backend services running on the instance with their type, version, port, and connection string. Use this to check what databases and caches are available.',
+    annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true },
+    inputSchema: {
+      type: 'object',
+      properties: {
+        app_id: { type: 'string', description: 'App ID (reads from nometria.json if omitted)' },
+      },
+    },
+  },
+  {
+    name: 'nometria_services_remove',
+    description: 'Remove a backend service from the instance. WARNING: This deletes the service container and its data. Create a backup first with nom db backup.',
+    annotations: { readOnlyHint: false, destructiveHint: true, idempotentHint: false },
+    inputSchema: {
+      type: 'object',
+      properties: {
+        app_id: { type: 'string', description: 'App ID (reads from nometria.json if omitted)' },
+        service: { type: 'string', description: 'Service name to remove (e.g., postgres, mysql, redis)' },
+      },
+      required: ['service'],
+    },
+  },
+  // ── Database Operations ─────────────────────────────────────────────────────
+  {
+    name: 'nometria_db_query',
+    description: 'Execute a read-only SQL query against a PostgreSQL or MySQL database on the instance. Returns results as JSON. Queries are wrapped in a read-only transaction - DDL and writes are blocked. For schema changes, use nometria_db_create_table.',
+    annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true },
+    inputSchema: {
+      type: 'object',
+      properties: {
+        app_id: { type: 'string', description: 'App ID (reads from nometria.json if omitted)' },
+        query: { type: 'string', description: 'SQL query to execute (SELECT only)' },
+        database: { type: 'string', enum: ['postgres', 'mysql'], description: 'Database engine (default: postgres)', default: 'postgres' },
+        target: { type: 'string', enum: ['standalone', 'supabase'], description: 'Which DB to query: "standalone" = the postgres/mysql container provisioned by `nom services add`; "supabase" = the self-hosted Supabase Postgres (default: standalone)', default: 'standalone' },
+      },
+      required: ['query'],
+    },
+  },
+  {
+    name: 'nometria_db_tables',
+    description: 'List all tables in the database with row counts and column info. Use this to understand the database schema before writing queries.',
+    annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true },
+    inputSchema: {
+      type: 'object',
+      properties: {
+        app_id: { type: 'string', description: 'App ID (reads from nometria.json if omitted)' },
+        database: { type: 'string', enum: ['postgres', 'mysql'], description: 'Database engine (default: postgres)', default: 'postgres' },
+        target: { type: 'string', enum: ['standalone', 'supabase'], description: 'Which DB: standalone (nom services add) or supabase (default: standalone)', default: 'standalone' },
+      },
+    },
+  },
+  {
+    name: 'nometria_db_describe',
+    description: 'Describe a table\'s schema: columns, data types, constraints, indexes, and foreign keys. Use this before writing queries or creating related tables.',
+    annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true },
+    inputSchema: {
+      type: 'object',
+      properties: {
+        app_id: { type: 'string', description: 'App ID (reads from nometria.json if omitted)' },
+        table_name: { type: 'string', description: 'Table name to describe' },
+        database: { type: 'string', enum: ['postgres', 'mysql'], description: 'Database engine (default: postgres)', default: 'postgres' },
+        target: { type: 'string', enum: ['standalone', 'supabase'], description: 'Which DB: standalone or supabase (default: standalone)', default: 'standalone' },
+      },
+      required: ['table_name'],
+    },
+  },
+  {
+    name: 'nometria_db_create_table',
+    description: 'Create a new database table. Generates and executes CREATE TABLE SQL with the specified columns. Automatically adds id (UUID), created_at, and updated_at columns.',
+    annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true },
+    inputSchema: {
+      type: 'object',
+      properties: {
+        app_id: { type: 'string', description: 'App ID (reads from nometria.json if omitted)' },
+        table_name: { type: 'string', description: 'Table name (lowercase, underscores)' },
+        columns: {
+          type: 'array',
+          description: 'Column definitions',
+          items: {
+            type: 'object',
+            properties: {
+              name: { type: 'string', description: 'Column name' },
+              type: { type: 'string', description: 'SQL type (text, integer, boolean, timestamp, jsonb, uuid, varchar(255), etc.)' },
+              nullable: { type: 'boolean', description: 'Allow NULL values (default: true)', default: true },
+              default_value: { type: 'string', description: 'Default value expression' },
+            },
+            required: ['name', 'type'],
+          },
+        },
+        database: { type: 'string', enum: ['postgres', 'mysql'], description: 'Database engine (default: postgres)', default: 'postgres' },
+        target: { type: 'string', enum: ['standalone', 'supabase'], description: 'Which DB: standalone or supabase (default: standalone)', default: 'standalone' },
+      },
+      required: ['table_name', 'columns'],
+    },
+  },
+  // ── Webhook Management ──────────────────────────────────────────────────────
+  {
+    name: 'nometria_webhook_add',
+    description: 'Add a webhook URL to receive notifications for deployment events. Supports: deploy.started, deploy.success, deploy.failed, preview.created, instance.started, instance.stopped, backup.completed.',
+    annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true },
+    inputSchema: {
+      type: 'object',
+      properties: {
+        app_id: { type: 'string', description: 'App ID (reads from nometria.json if omitted)' },
+        url: { type: 'string', description: 'Webhook URL to receive POST notifications' },
+        events: {
+          type: 'array',
+          items: { type: 'string', enum: ['deploy.started', 'deploy.success', 'deploy.failed', 'preview.created', 'instance.started', 'instance.stopped', 'backup.completed'] },
+          description: 'Events to subscribe to (default: all events)',
+        },
+      },
+      required: ['url'],
+    },
+  },
+  {
+    name: 'nometria_webhook_list',
+    description: 'List all configured webhooks for an app with their URLs and subscribed events.',
+    annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true },
+    inputSchema: {
+      type: 'object',
+      properties: {
+        app_id: { type: 'string', description: 'App ID (reads from nometria.json if omitted)' },
+      },
+    },
+  },
+  {
+    name: 'nometria_webhook_delete',
+    description: 'Remove a webhook subscription.',
+    annotations: { readOnlyHint: false, destructiveHint: true, idempotentHint: false },
+    inputSchema: {
+      type: 'object',
+      properties: {
+        app_id: { type: 'string', description: 'App ID (reads from nometria.json if omitted)' },
+        webhook_id: { type: 'string', description: 'Webhook ID to delete' },
+      },
+      required: ['webhook_id'],
+    },
+  },
+  // ── Documentation ───────────────────────────────────────────────────────────
+  {
+    name: 'nometria_help',
+    description: 'Get documentation about Nometria features. Use this when you need to understand how a feature works before using it. Covers deployment, databases, services, auth, domains, and troubleshooting.',
+    annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true },
+    inputSchema: {
+      type: 'object',
+      properties: {
+        topic: {
+          type: 'string',
+          enum: ['overview', 'deploy', 'preview', 'services', 'database', 'env', 'domains', 'github', 'auth', 'storage', 'webhooks', 'troubleshooting'],
+          description: 'Documentation topic',
+        },
+      },
+      required: ['topic'],
     },
   },
 ];
@@ -209,6 +417,61 @@ function _detectServices(dir) {
   return result;
 }
 
+// ── Database command builder ──────────────────────────────────────────────────
+// Resolves the right shell command for the given (database, target) combo.
+//   target='standalone' → query the docker container provisioned by `nom services add`
+//                          (reads password from /home/ubuntu/services/state.json)
+//   target='supabase'   → query the self-hosted Supabase Postgres
+//                          (reads POSTGRES_PASSWORD from /home/ubuntu/supabase${APP_ID}/.env)
+function _buildDbCommand(database, target, op, params) {
+  const sql = (params.sql || params.query || '').replace(/"/g, '\\"');
+  const table = params.table || '';
+
+  if (database === 'postgres' && target === 'supabase') {
+    // Self-hosted Supabase: read POSTGRES_PASSWORD from supabase .env, exec inside container
+    const pgCmd = (q) =>
+      `SUPA_DIR=$(ls -d /home/ubuntu/supabase* 2>/dev/null | head -1); ` +
+      `PG_PASS=$(grep -E '^POSTGRES_PASSWORD=' "$SUPA_DIR/.env" 2>/dev/null | tail -1 | cut -d= -f2- | tr -d '\\"'); ` +
+      `PG_CTR=$(docker ps --filter name=supabase-db --format '{{.Names}}' | head -1); ` +
+      `docker exec -e PGPASSWORD="$PG_PASS" -e PGSSLMODE=disable "$PG_CTR" ` +
+      `psql -U postgres -d postgres -c "${q}" --csv`;
+
+    if (op === 'query') return pgCmd(sql);
+    if (op === 'tables') return pgCmd(`SELECT tablename, pg_total_relation_size('public.'||tablename) AS size_bytes FROM pg_tables WHERE schemaname='public' ORDER BY tablename;`);
+    if (op === 'describe') return pgCmd(`SELECT column_name, data_type, is_nullable, column_default FROM information_schema.columns WHERE table_schema='public' AND table_name='${table}' ORDER BY ordinal_position;`);
+    if (op === 'exec') return pgCmd(sql);
+  }
+
+  if (database === 'postgres') {
+    // Standalone postgres (nom services add postgres): nometria-postgres container
+    const pgCmd = (q) =>
+      `PG_PASS=$(python3 -c "import json; s=json.load(open('/home/ubuntu/services/state.json')); ` +
+      `[print(x['password']) for x in s.get('services',[]) if x['type']=='postgres']" 2>/dev/null); ` +
+      `docker exec -e PGPASSWORD="$PG_PASS" nometria-postgres ` +
+      `psql -U nometria -d app -c "${q}" --csv`;
+
+    if (op === 'query') return pgCmd(sql);
+    if (op === 'tables') return pgCmd(`SELECT tablename, pg_total_relation_size('public.'||tablename) AS size_bytes FROM pg_tables WHERE schemaname='public' ORDER BY tablename;`);
+    if (op === 'describe') return pgCmd(`SELECT column_name, data_type, is_nullable, column_default FROM information_schema.columns WHERE table_schema='public' AND table_name='${table}' ORDER BY ordinal_position;`);
+    if (op === 'exec') return pgCmd(sql);
+  }
+
+  if (database === 'mysql') {
+    // Standalone mysql: nometria-mysql container, password from state.json
+    const mysqlCmd = (q) =>
+      `MY_PASS=$(python3 -c "import json; s=json.load(open('/home/ubuntu/services/state.json')); ` +
+      `[print(x['password']) for x in s.get('services',[]) if x['type']=='mysql']" 2>/dev/null); ` +
+      `docker exec nometria-mysql mysql -u nometria -p"$MY_PASS" app -e "${q}" --batch 2>&1 | grep -v 'Using a password'`;
+
+    if (op === 'query') return mysqlCmd(sql);
+    if (op === 'tables') return mysqlCmd('SHOW TABLES;');
+    if (op === 'describe') return mysqlCmd(`DESCRIBE ${table};`);
+    if (op === 'exec') return mysqlCmd(sql);
+  }
+
+  throw new Error(`Unsupported database='${database}' target='${target}' op='${op}'`);
+}
+
 // Tool handlers
 async function handleTool(name, args) {
   const apiKey = args.api_key || getApiKey();
@@ -224,7 +487,7 @@ async function handleTool(name, args) {
             if (check.success) return `Already authenticated as ${check.email}.\n\nTo re-authenticate, run \`nom login\` in the terminal (opens browser) or provide an api_key argument.`;
           } catch { /* not valid, show instructions */ }
         }
-        return 'Not authenticated.\n\nTo sign in:\n  1. Run `nom login` in your terminal (opens browser — easiest)\n  2. Or get an API key at https://nometria.com/settings/api-keys and call this tool with the api_key argument\n  3. Or set NOMETRIA_API_KEY environment variable';
+        return 'Not authenticated.\n\nTo sign in:\n  1. Run `nom login` in your terminal (opens browser - easiest)\n  2. Or get an API key at https://nometria.com/settings/api-keys and call this tool with the api_key argument\n  3. Or set NOMETRIA_API_KEY environment variable';
       }
       const result = await apiRequest('/cli/auth', { body: { api_key: args.api_key } });
       if (result.success) {
@@ -348,7 +611,7 @@ async function handleTool(name, args) {
       }
       if (!appId) return 'No app_id specified and no nometria.json found.';
       const result = await apiRequest('/checkAwsStatus', { apiKey, body: { app_id: appId } });
-      return `App: ${appId}\nStatus: ${result.status}\nURL: ${result.url || '—'}\nInstance: ${result.instance_type || '—'}\nIP: ${result.ip_address || '—'}`;
+      return `App: ${appId}\nStatus: ${result.status}\nURL: ${result.url || '-'}\nInstance: ${result.instance_type || '-'}\nIP: ${result.ip_address || '-'}`;
     }
 
     case 'nometria_logs': {
@@ -371,7 +634,7 @@ async function handleTool(name, args) {
       const result = await apiRequest('/listUserMigrations', { apiKey, body: {} });
       if (!result.apps?.length) return 'No apps found.';
       return result.apps.map(a =>
-        `${a.app_name || a.app_id} (${a.platform}) — ${a.delivery_type}, ${a.payment_status}`
+        `${a.app_name || a.app_id} (${a.platform}) - ${a.delivery_type}, ${a.payment_status}`
       ).join('\n');
     }
 
@@ -553,9 +816,406 @@ async function handleTool(name, args) {
       }
       try {
         const result = await apiRequest(`/v1/deployments/${targetId}/rollback`, { apiKey, body: { app_id: appId } });
-        return `Rollback complete.\nRolled back to: ${targetId}\nURL: ${result.url || '—'}\nDashboard: https://nometria.com/AppDetails?app_id=${appId}`;
+        return `Rollback complete.\nRolled back to: ${targetId}\nURL: ${result.url || '-'}\nDashboard: https://nometria.com/AppDetails?app_id=${appId}`;
       } catch (err) {
         return `Rollback failed: ${err.message}\nDashboard: https://nometria.com/AppDetails?app_id=${appId}`;
+      }
+    }
+
+    // ── nometria_info - comprehensive project context ──────────────────────
+    case 'nometria_info': {
+      if (!apiKey) return 'Not authenticated. Use nometria_login first.';
+      const appId = args.app_id || readAppId();
+      const dir = process.cwd();
+      const configPath = join(dir, 'nometria.json');
+      let config = {};
+      if (existsSync(configPath)) {
+        try { config = JSON.parse(readFileSync(configPath, 'utf8')); } catch { /* ignore */ }
+      }
+      const PRICING = { '2gb': 39, '4gb': 49, '8gb': 79, '16gb': 129 };
+      const instanceSize = config.instanceType || '4gb';
+      const info = {
+        app_name: config.name || appId || '(not configured)',
+        framework: config.framework || 'unknown',
+        platform: config.platform || 'aws',
+        region: config.region || 'us-east-1',
+        instance_type: instanceSize,
+        estimated_cost: `$${PRICING[instanceSize] || '??'}/month`,
+        app_id: config.app_id || null,
+        services_infra: config.services_infra || [],
+        services: config.services || [],
+        docker_compose: config.docker_compose || false,
+      };
+      // Fetch live status if deployed
+      if (appId) {
+        try {
+          const status = await apiRequest('/checkAwsStatus', { apiKey, body: { app_id: appId } });
+          const d = status.data || status;
+          info.status = d.deploymentStatus || d.instanceState || status.status || 'unknown';
+          info.url = d.deployUrl || d.url || `https://${appId}.ownmy.app`;
+          info.ip_address = d.ipAddress || null;
+        } catch { info.status = 'unknown'; }
+        // Check GitHub
+        try {
+          const gh = await apiRequest('/getUserGithubConnection', { apiKey, body: { app_id: appId } });
+          info.github_connected = !!gh.connected;
+          if (gh.github_user) info.github_user = gh.github_user;
+        } catch { info.github_connected = false; }
+        // Check env vars
+        try {
+          const env = await apiRequest('/cli/env', { apiKey, body: { app_id: appId, action: 'list' } });
+          info.env_vars = env.keys || [];
+        } catch { info.env_vars = []; }
+      }
+      return JSON.stringify(info, null, 2);
+    }
+
+    // ── nometria_help - embedded documentation ───────────────────────────────
+    case 'nometria_help': {
+      const HELP_TOPICS = {
+        overview: `# Nometria Overview
+Nometria deploys any project to any cloud (AWS, GCP, Azure, DigitalOcean, Hetzner, Vercel).
+
+Quick start:
+1. nometria_init - Create config (auto-detects framework)
+2. nometria_deploy - Deploy to production
+3. nometria_status - Check deployment
+
+Supported frameworks: Next.js, Vite, Remix, Astro, SvelteKit, Nuxt, Node.js, Python, Deno, static sites.
+Instance sizes: 2gb ($39/mo), 4gb ($49/mo), 8gb ($79/mo), 16gb ($129/mo).
+
+Backend services: Add databases (PostgreSQL, MySQL, MongoDB), caches (Redis), and storage (MinIO) with nometria_services_add.`,
+
+        deploy: `# Deployment
+First deploy (~2-5 min): Creates instance, provisions infrastructure, deploys code.
+Subsequent deploys (~1 min): Resyncs code only (faster).
+
+Flow: Build locally → Upload archive → Trigger cloud deploy → Poll for completion.
+
+Commands:
+- nometria_deploy - Production deploy
+- nometria_preview - Free 2-hour staging preview
+- nometria_rollback - Roll back to previous version
+- nometria_status - Check deploy status
+
+Config: nometria.json controls framework, platform, region, instance size, build command.
+Dry run: Use --dry-run flag with CLI to validate without deploying.`,
+
+        preview: `# Staging Previews
+Free temporary deployments for testing before production.
+- Expire after 2 hours
+- No billing
+- Isolated from production
+- Full build + deploy pipeline
+
+Use nometria_preview to create one. Share the URL for review.`,
+
+        services: `# Backend Services
+Add databases, caches, and storage to your deployed instance.
+
+Available services:
+- postgres - PostgreSQL 16 (port 5432)
+- mysql - MySQL 8.4 (port 3306)
+- mongodb - MongoDB 7 (port 27017)
+- redis - Redis 7 (port 6379)
+- minio - MinIO S3-compatible storage (port 9000/9001)
+
+Commands:
+- nometria_services_add - Provision a new service
+- nometria_services_list - List running services
+- nometria_services_remove - Remove a service
+
+Each service runs as a Docker container with auto-generated credentials.
+Connection strings are automatically injected as environment variables.`,
+
+        database: `# Database Management
+Nometria provides full database lifecycle management.
+
+Query: nometria_db_query - Run read-only SQL queries
+Schema: nometria_db_tables - List all tables
+Schema: nometria_db_describe - Describe table columns
+Create: nometria_db_create_table - Create tables with auto id/timestamps
+
+Backups: Daily automated backups to S3 + on-demand via CLI (nom db backup).
+Restore: nom db restore <backup_id>
+Migrations: Auto-detects Drizzle, Prisma, or custom migration scripts.
+Shell: nom db shell - Shows connection instructions (SSH tunnel or SSM).`,
+
+        env: `# Environment Variables
+Manage app configuration securely.
+
+- nometria_env_set - Set key-value pairs
+- nometria_env_list - List keys (values hidden for security)
+
+Variables persist across resyncs.
+Use @env: prefix in nometria.json to read from local env at deploy time.
+Sensitive patterns (API keys, tokens) trigger warnings in CLI.`,
+
+        domains: `# Custom Domains
+Add your own domain with automatic SSL.
+
+Steps:
+1. Point your domain's DNS A record to your instance IP (use nometria_status to get IP)
+2. Run nometria_domain_add with your domain
+3. SSL certificate auto-provisions via Let's Encrypt
+
+Subdomains: *.ownmy.app auto-assigned. Custom domains require DNS setup.`,
+
+        github: `# GitHub Integration
+Connect for auto-deploy on every push.
+
+- nometria_github_connect - Set up OAuth (requires browser)
+- nometria_github_status - Check connection
+- nometria_github_push - Push code changes
+
+After connecting, every git push triggers an automatic resync.`,
+
+        auth: `# Authentication
+Nometria apps include built-in auth via Supabase Auth (when Supabase is provisioned).
+
+Features:
+- Email/password registration and login
+- OAuth providers: Google, GitHub, Microsoft, Discord, LinkedIn, X, Apple
+- Magic links and email verification
+- JWT-based sessions with Row Level Security (RLS)
+- Password reset flow
+
+Auth is auto-provisioned with Supabase. For standalone databases, implement auth in your app code.`,
+
+        storage: `# Object Storage
+Two options for file storage:
+
+1. Supabase Storage (auto-provisioned with Supabase)
+   - S3-compatible API
+   - Bucket management with public/private visibility
+   - Direct uploads and presigned URLs
+
+2. MinIO (via nometria_services_add minio)
+   - S3-compatible API on port 9000
+   - Web console on port 9001
+   - Use any S3 SDK to interact
+
+Connection details injected as env vars after provisioning.`,
+
+        webhooks: `# Webhooks
+Receive HTTP POST notifications for deployment events.
+
+Events: deploy.started, deploy.success, deploy.failed, preview.created,
+        instance.started, instance.stopped, backup.completed
+
+Commands:
+- nometria_webhook_add - Subscribe a URL to events
+- nometria_webhook_list - List all webhooks
+- nometria_webhook_delete - Remove a webhook
+
+Payload includes: event type, app_id, timestamp, and event-specific data.`,
+
+        troubleshooting: `# Troubleshooting
+
+Build fails:
+- Check nometria.json build.command
+- Run the build command locally first
+- Ensure Node.js version compatibility
+
+Deploy stuck:
+- Use nometria_status to check state
+- Use nometria_logs to view errors
+- Dashboard: https://nometria.com/dashboard
+
+Auth errors:
+- Run nom login for browser sign-in
+- Or get API key at https://nometria.com/settings/api-keys
+- Set NOMETRIA_API_KEY env var
+
+Database connection issues:
+- Use nometria_services_list to verify service is running
+- Check env vars with nometria_env_list
+- Use nom db shell for direct connection instructions
+
+Instance won't start:
+- Check billing: https://nometria.com/dashboard
+- Try nometria_start
+- If persistent, contact support
+
+Docs: https://docs.nometria.com`,
+      };
+      return HELP_TOPICS[args.topic] || `Unknown topic: ${args.topic}. Available: ${Object.keys(HELP_TOPICS).join(', ')}`;
+    }
+
+    // ── Backend Services Management ──────────────────────────────────────────
+    case 'nometria_services_add': {
+      if (!apiKey) return 'Not authenticated. Use nometria_login first.';
+      const appId = args.app_id || readAppId();
+      if (!appId) return 'No app_id found. Deploy first with nometria_deploy, or pass app_id.';
+      const service = args.service;
+      const validServices = ['postgres', 'mysql', 'mongodb', 'redis', 'minio'];
+      if (!validServices.includes(service)) return `Invalid service: ${service}. Available: ${validServices.join(', ')}`;
+      try {
+        const result = await apiRequest('/cli/services', { apiKey, body: { app_id: appId, action: 'add', service } });
+        let msg = `${service} provisioned successfully.`;
+        if (result.connection_string) msg += `\nConnection: ${result.connection_string}`;
+        if (result.env_var) msg += `\nEnv var set: ${result.env_var}`;
+        if (result.port) msg += `\nPort: ${result.port}`;
+        msg += '\n\nThe connection string has been auto-injected as an environment variable.';
+        return msg;
+      } catch (err) {
+        return `Failed to add ${service}: ${err.message}\nMake sure the instance is running (use nometria_status to check).`;
+      }
+    }
+    case 'nometria_services_list': {
+      if (!apiKey) return 'Not authenticated. Use nometria_login first.';
+      const appId = args.app_id || readAppId();
+      if (!appId) return 'No app_id found. Deploy first with nometria_deploy, or pass app_id.';
+      try {
+        const result = await apiRequest('/cli/services', { apiKey, body: { app_id: appId, action: 'list' } });
+        const services = result.services || [];
+        if (!services.length) return 'No backend services running.\n\nAdd one with nometria_services_add (postgres, mysql, mongodb, redis, minio).';
+        return services.map(s =>
+          `${s.name || s.type} (${s.type}:${s.version || 'latest'})\n  Port: ${s.port}\n  Status: ${s.status || 'running'}\n  Connection: ${s.connection_string || '-'}`
+        ).join('\n\n');
+      } catch (err) {
+        return `Failed to list services: ${err.message}`;
+      }
+    }
+    case 'nometria_services_remove': {
+      if (!apiKey) return 'Not authenticated. Use nometria_login first.';
+      const appId = args.app_id || readAppId();
+      if (!appId) return 'No app_id found.';
+      try {
+        const result = await apiRequest('/cli/services', { apiKey, body: { app_id: appId, action: 'remove', service: args.service } });
+        return result.success ? `${args.service} removed.` : `Failed: ${result.error}`;
+      } catch (err) {
+        return `Failed to remove ${args.service}: ${err.message}`;
+      }
+    }
+
+    // ── Database Operations ──────────────────────────────────────────────────
+    case 'nometria_db_query': {
+      if (!apiKey) return 'Not authenticated. Use nometria_login first.';
+      const appId = args.app_id || readAppId();
+      if (!appId) return 'No app_id found.';
+      const query = args.query?.trim();
+      if (!query) return 'No query provided.';
+      // Block write operations
+      const upperQ = query.toUpperCase().replace(/\s+/g, ' ');
+      const blocked = ['INSERT ', 'UPDATE ', 'DELETE ', 'DROP ', 'ALTER ', 'CREATE ', 'TRUNCATE ', 'GRANT ', 'REVOKE '];
+      if (blocked.some(kw => upperQ.startsWith(kw) || upperQ.includes(` ${kw}`))) {
+        return 'Write operations are not allowed via nometria_db_query. Use nometria_db_create_table for schema changes.';
+      }
+      try {
+        const db = args.database || 'postgres';
+        const target = args.target || 'standalone'; // 'standalone' | 'supabase'
+        const cmd = _buildDbCommand(db, target, 'query', { query });
+        const result = await apiRequest('/cli/exec', {
+          apiKey,
+          body: { app_id: appId, command: cmd },
+        });
+        return result.output || result.stdout || '(no results)';
+      } catch (err) {
+        return `Query failed: ${err.message}`;
+      }
+    }
+    case 'nometria_db_tables': {
+      if (!apiKey) return 'Not authenticated. Use nometria_login first.';
+      const appId = args.app_id || readAppId();
+      if (!appId) return 'No app_id found.';
+      try {
+        const db = args.database || 'postgres';
+        const target = args.target || 'standalone';
+        const cmd = _buildDbCommand(db, target, 'tables', {});
+        const result = await apiRequest('/cli/exec', { apiKey, body: { app_id: appId, command: cmd } });
+        return result.output || result.stdout || 'No tables found.';
+      } catch (err) {
+        return `Failed to list tables: ${err.message}`;
+      }
+    }
+    case 'nometria_db_describe': {
+      if (!apiKey) return 'Not authenticated. Use nometria_login first.';
+      const appId = args.app_id || readAppId();
+      if (!appId) return 'No app_id found.';
+      const table = args.table_name;
+      if (!table) return 'No table_name provided.';
+      if (!/^[a-zA-Z_][a-zA-Z0-9_]*$/.test(table)) return 'Invalid table name.';
+      try {
+        const db = args.database || 'postgres';
+        const target = args.target || 'standalone';
+        const cmd = _buildDbCommand(db, target, 'describe', { table });
+        const result = await apiRequest('/cli/exec', { apiKey, body: { app_id: appId, command: cmd } });
+        return result.output || result.stdout || `Table '${table}' not found.`;
+      } catch (err) {
+        return `Failed to describe table: ${err.message}`;
+      }
+    }
+    case 'nometria_db_create_table': {
+      if (!apiKey) return 'Not authenticated. Use nometria_login first.';
+      const appId = args.app_id || readAppId();
+      if (!appId) return 'No app_id found.';
+      const tableName = args.table_name;
+      if (!tableName || !/^[a-z_][a-z0-9_]*$/.test(tableName)) return 'Invalid table_name. Use lowercase letters, numbers, and underscores.';
+      const columns = args.columns;
+      if (!columns?.length) return 'No columns provided.';
+      try {
+        const db = args.database || 'postgres';
+        const target = args.target || 'standalone';
+        // Build CREATE TABLE SQL
+        const colDefs = columns.map(c => {
+          if (!/^[a-z_][a-z0-9_]*$/.test(c.name)) throw new Error(`Invalid column name: ${c.name}`);
+          let def = `${c.name} ${c.type}`;
+          if (c.nullable === false) def += ' NOT NULL';
+          if (c.default_value) def += ` DEFAULT ${c.default_value}`;
+          return def;
+        });
+        // Auto-add id, created_at, updated_at
+        const autoColumns = db === 'postgres'
+          ? ['id UUID PRIMARY KEY DEFAULT gen_random_uuid()', 'created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()', 'updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()']
+          : ['id CHAR(36) PRIMARY KEY DEFAULT (UUID())', 'created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP', 'updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP'];
+        const allCols = [...autoColumns, ...colDefs];
+        const sql = `CREATE TABLE IF NOT EXISTS ${tableName} (${allCols.join(', ')});`;
+        const cmd = _buildDbCommand(db, target, 'exec', { sql });
+        const result = await apiRequest('/cli/exec', { apiKey, body: { app_id: appId, command: cmd } });
+        return `Table '${tableName}' created successfully.\nColumns: id, created_at, updated_at, ${columns.map(c => c.name).join(', ')}\n\n${result.output || result.stdout || ''}`;
+      } catch (err) {
+        return `Failed to create table: ${err.message}`;
+      }
+    }
+
+    // ── Webhook Management ───────────────────────────────────────────────────
+    case 'nometria_webhook_add': {
+      if (!apiKey) return 'Not authenticated. Use nometria_login first.';
+      const appId = args.app_id || readAppId();
+      if (!appId) return 'No app_id found.';
+      try {
+        const result = await apiRequest('/cli/webhooks', {
+          apiKey,
+          body: { app_id: appId, action: 'add', url: args.url, events: args.events || [] },
+        });
+        return `Webhook added.\nID: ${result.webhook_id || '-'}\nURL: ${args.url}\nEvents: ${(args.events || ['all']).join(', ')}`;
+      } catch (err) {
+        return `Failed to add webhook: ${err.message}`;
+      }
+    }
+    case 'nometria_webhook_list': {
+      if (!apiKey) return 'Not authenticated. Use nometria_login first.';
+      const appId = args.app_id || readAppId();
+      if (!appId) return 'No app_id found.';
+      try {
+        const result = await apiRequest('/cli/webhooks', { apiKey, body: { app_id: appId, action: 'list' } });
+        const hooks = result.webhooks || [];
+        if (!hooks.length) return 'No webhooks configured.\n\nAdd one with nometria_webhook_add.';
+        return hooks.map(h => `${h.id}: ${h.url}\n  Events: ${(h.events || ['all']).join(', ')}\n  Created: ${h.created_at || '-'}`).join('\n\n');
+      } catch (err) {
+        return `Failed to list webhooks: ${err.message}`;
+      }
+    }
+    case 'nometria_webhook_delete': {
+      if (!apiKey) return 'Not authenticated. Use nometria_login first.';
+      const appId = args.app_id || readAppId();
+      if (!appId) return 'No app_id found.';
+      try {
+        const result = await apiRequest('/cli/webhooks', { apiKey, body: { app_id: appId, action: 'delete', webhook_id: args.webhook_id } });
+        return result.success ? 'Webhook deleted.' : `Failed: ${result.error}`;
+      } catch (err) {
+        return `Failed to delete webhook: ${err.message}`;
       }
     }
 
@@ -706,7 +1366,7 @@ async function handleMessage(msg) {
       result: {
         protocolVersion: clientVersion,
         capabilities: { tools: {} },
-        serverInfo: { name: 'nometria', version: '0.2.8' },
+        serverInfo: { name: 'nometria', version: '0.3.2' },
       },
     });
   } else if (msg.method === 'notifications/initialized') {

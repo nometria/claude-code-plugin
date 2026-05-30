@@ -1,6 +1,6 @@
 {
   "name": "nometria",
-  "displayName": "Nometria — Deploy to Any Cloud",
+  "displayName": "Nometria - Deploy to Any Cloud",
   "description": "Deploy, manage, and monitor apps from any AI coding tool. 20 MCP tools for production deployments, instance management, GitHub sync, env vars, custom domains, and AI security scans.",
   "version": "0.1.0",
   "author": {

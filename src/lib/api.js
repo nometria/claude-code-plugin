@@ -48,7 +48,7 @@ export async function apiRequest(path, { body = {}, apiKey } = {}) {
     throw new Error(message);
   }
 
-  // server.js wraps all JSON responses in { data: ... } — unwrap
+  // server.js wraps all JSON responses in { data: ... } - unwrap
   const raw = await res.json();
   return raw?.data !== undefined ? raw.data : raw;
 }

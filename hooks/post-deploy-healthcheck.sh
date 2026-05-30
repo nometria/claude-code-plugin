@@ -59,7 +59,7 @@ if [ "$HEALTHY" = "true" ]; then
   exit 0
 fi
 
-# Health check failed — attempt auto-rollback
+# Health check failed - attempt auto-rollback
 echo ""
 echo "WARNING: Health check failed after 3 attempts."
 echo "Attempting auto-rollback to previous deployment..."

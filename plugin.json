@@ -1,7 +1,7 @@
 {
   "name": "nometria",
-  "version": "0.1.0",
-  "displayName": "Nometria — Deploy to Any Cloud",
+  "version": "0.1.1",
+  "displayName": "Nometria - Deploy to Any Cloud",
   "description": "Deploy, manage, and monitor apps from Claude Code. One command to production.",
   "author": {
     "name": "Nometria",
@@ -33,7 +33,12 @@
     "skills/deploy/SKILL.md",
     "skills/preview/SKILL.md",
     "skills/status/SKILL.md",
-    "skills/login/SKILL.md"
+    "skills/login/SKILL.md",
+    "skills/logs/SKILL.md",
+    "skills/scan/SKILL.md",
+    "skills/rollback/SKILL.md",
+    "skills/resync-schema/SKILL.md",
+    "skills/backups/SKILL.md"
   ],
   "mcp": ".mcp.json"
 }

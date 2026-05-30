@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Nometria Hook: Cost guardian — detect idle instances
+# Nometria Hook: Cost guardian - detect idle instances
 # Runs on session start. Lists running instances and warns about idle ones.
 #
 # Install as a Claude Code SessionStart hook.

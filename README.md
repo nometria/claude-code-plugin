@@ -45,10 +45,10 @@ npx @nometria-ai/nom setup
 
 After running `setup`, these are available in Claude Code:
 
-- `/deploy` — Deploy to production
-- `/preview` — Create staging preview
-- `/status` — Check deployment status
-- `/nometria-login` — Authenticate
+- `/deploy` - Deploy to production
+- `/preview` - Create staging preview
+- `/status` - Check deployment status
+- `/nometria-login` - Authenticate
 
 ## Quick Start
 
@@ -76,7 +76,7 @@ AWS, Google Cloud, Azure, DigitalOcean, Hetzner, Vercel
 
 ## Also Available
 
-- **CLI**: `npx @nometria-ai/nom deploy` — [npm](https://npmjs.com/package/@nometria-ai/nom)
+- **CLI**: `npx @nometria-ai/nom deploy` - [npm](https://npmjs.com/package/@nometria-ai/nom)
 - **VS Code**: Search "Nometria" in extensions
 - **Cursor**: Auto-rules via `.cursor/rules/`
 

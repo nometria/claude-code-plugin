@@ -35,7 +35,7 @@ try {
     config = JSON.parse(readFileSync(claudeJsonPath, 'utf8'));
   }
 
-  // Build the MCP server entry — use shell wrapper to handle nvm/fnm/volta
+  // Build the MCP server entry - use shell wrapper to handle nvm/fnm/volta
   const mcpEntry = {
     type: 'stdio',
     command: '/bin/sh',

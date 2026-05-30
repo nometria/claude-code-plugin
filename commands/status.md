@@ -46,16 +46,16 @@ Present results as a clear table:
 ╠══════════════════╬══════════╬═══════════╬════════════════════════════════╬═════════════════╣
 ║ MyApp            ║ Base44   ║ ● running ║ https://myapp.nometria.com        ║ 4gb (t4g.med)   ║
 ║ OtherApp         ║ Lovable  ║ ○ stopped ║ https://otherapp.nometria.com     ║ 2gb (t4g.small) ║
-║ TestProject      ║ Manus    ║ — none    ║ —                              ║ —               ║
+║ TestProject      ║ Manus    ║ - none    ║ -                              ║ -               ║
 ╚══════════════════╩══════════╩═══════════╩════════════════════════════════╩═════════════════╝
 ```
 
 Use these status indicators:
-- `● running` — app is live
-- `◐ deploying` / `◐ launching` — deployment in progress
-- `○ stopped` — instance exists but is off
-- `✕ failed` — deployment failed (show error if available)
-- `— none` — not deployed to hosting
+- `● running` - app is live
+- `◐ deploying` / `◐ launching` - deployment in progress
+- `○ stopped` - instance exists but is off
+- `✕ failed` - deployment failed (show error if available)
+- `- none` - not deployed to hosting
 
 If `$ARGUMENTS` was provided, filter the results to match that app name.
 

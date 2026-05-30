@@ -73,5 +73,5 @@ if [ -n "$SCORE" ] && [ "$SCORE" -lt 70 ]; then
 fi
 
 if [ -n "$SCORE" ]; then
-  echo "Nometria: security score $SCORE/100 — passed. Proceeding with deploy."
+  echo "Nometria: security score $SCORE/100 - passed. Proceeding with deploy."
 fi
