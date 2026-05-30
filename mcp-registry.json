@@ -1,7 +1,7 @@
 {
   "name": "nometria",
   "displayName": "Nometria - Deploy to Any Cloud",
-  "description": "Deploy, manage, and monitor apps from any AI coding tool. 20 MCP tools for production deployments, instance management, GitHub sync, env vars, custom domains, and AI security scans.",
+  "description": "Deploy, manage, and monitor apps from any AI coding tool. 30+ MCP tools for production deployments, instance management, backend services, databases, GitHub sync, env vars, custom domains, webhooks, and AI security scans.",
   "version": "0.1.0",
   "author": {
     "name": "Nometria",
@@ -27,6 +27,7 @@
     "devops"
   ],
   "tools": [
+    { "name": "nometria_info", "description": "Get comprehensive project context in a single call: app name, framework, platform, status, URL, services, env keys, GitHub connection, and estimated cost" },
     { "name": "nometria_login", "description": "Save your Nometria API key or get sign-in instructions" },
     { "name": "nometria_deploy", "description": "Deploy the current project to production" },
     { "name": "nometria_preview", "description": "Create a free 2-hour staging preview" },
@@ -47,6 +48,17 @@
     { "name": "nometria_env_list", "description": "List environment variable keys for your app" },
     { "name": "nometria_scan", "description": "Run AI security and performance scan" },
     { "name": "nometria_setup", "description": "Generate AI tool config files for all IDEs" },
-    { "name": "nometria_rollback", "description": "Roll back to a previous deployment version" }
+    { "name": "nometria_rollback", "description": "Roll back to a previous deployment version" },
+    { "name": "nometria_services_add", "description": "Add a backend service (postgres, mysql, mongodb, redis, minio) to your instance" },
+    { "name": "nometria_services_list", "description": "List backend services running on the instance with connection details" },
+    { "name": "nometria_services_remove", "description": "Remove a backend service from the instance" },
+    { "name": "nometria_db_query", "description": "Run a read-only SQL query against a database on the instance" },
+    { "name": "nometria_db_tables", "description": "List database tables with row counts and column info" },
+    { "name": "nometria_db_describe", "description": "Describe a table's schema: columns, types, constraints, indexes, foreign keys" },
+    { "name": "nometria_db_create_table", "description": "Create a new database table with the specified columns" },
+    { "name": "nometria_webhook_add", "description": "Add a webhook URL to receive deployment event notifications" },
+    { "name": "nometria_webhook_list", "description": "List configured webhooks and their subscribed events" },
+    { "name": "nometria_webhook_delete", "description": "Remove a webhook subscription" },
+    { "name": "nometria_help", "description": "Get documentation about Nometria features and troubleshooting" }
   ]
 }
