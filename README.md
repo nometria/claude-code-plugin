@@ -31,24 +31,56 @@ npx @nometria-ai/nom setup
 
 ## MCP Tools
 
-| Tool | Description |
-|------|-------------|
-| `nometria_login` | Authenticate with your API key |
-| `nometria_init` | Create nometria.json config |
-| `nometria_deploy` | Deploy to production |
-| `nometria_preview` | Create staging preview (free, 2hr) |
-| `nometria_status` | Check deployment status |
-| `nometria_logs` | View deployment logs |
-| `nometria_list_apps` | List all your apps |
+The MCP server exposes **34 tools**, grouped by area:
+
+**Auth & config:** `nometria_login`, `nometria_init`, `nometria_setup`, `nometria_info`
+
+**Deploy:** `nometria_deploy`, `nometria_preview`, `nometria_rollback`
+
+**Monitoring:** `nometria_status`, `nometria_logs`, `nometria_list_apps`, `nometria_scan`
+
+**Instance lifecycle:** `nometria_start`, `nometria_stop`, `nometria_terminate`, `nometria_upgrade`
+
+**Domains & env:** `nometria_domain_add`, `nometria_env_set`, `nometria_env_list`
+
+**GitHub:** `nometria_github_connect`, `nometria_github_status`, `nometria_github_repos`, `nometria_github_push`
+
+**Backend services:** `nometria_services_add`, `nometria_services_list`, `nometria_services_remove`
+
+**Database:** `nometria_db_query`, `nometria_db_tables`, `nometria_db_describe`, `nometria_db_create_table`
+
+**Webhooks:** `nometria_webhook_add`, `nometria_webhook_list`, `nometria_webhook_delete`
+
+**Docs:** `nometria_help`
 
 ## Slash Commands
 
-After running `setup`, these are available in Claude Code:
+After running `setup` (or installing the plugin), these are available in Claude Code:
 
 - `/deploy` - Deploy to production
 - `/preview` - Create staging preview
 - `/status` - Check deployment status
+- `/logs` - View deployment logs
+- `/rollback` - Roll back to a previous deployment
+- `/env` - Manage environment variables
+- `/domain` - Add or check custom domains
 - `/nometria-login` - Authenticate
+
+## Skills
+
+The plugin ships agentic skills Claude invokes automatically: `deploy`, `preview`,
+`status`, `logs`, `login`, `scan`, `rollback`, `resync-schema`, `backups`.
+
+## Automation Hooks
+
+Wired via `hooks/hooks.json`, opt-in deployment automation:
+
+- **security-gate** (PreToolUse) - blocks deploys when the security score is below 70
+- **auto-deploy-on-commit** (PostToolUse) - resyncs on `git commit`
+- **pr-preview** (PostToolUse) - spins up a preview URL on PR/branch push
+- **post-deploy-healthcheck** (PostToolUse) - HTTP 200 check with auto-rollback
+- **live-preview-on-edit** (PostToolUse) - keeps a live preview fresh on edits
+- **cost-guardian** (SessionStart) - warns about idle running instances
 
 ## Quick Start
 

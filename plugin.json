@@ -40,5 +40,6 @@
     "skills/resync-schema/SKILL.md",
     "skills/backups/SKILL.md"
   ],
-  "mcp": ".mcp.json"
+  "mcp": ".mcp.json",
+  "hooks": "hooks/hooks.json"
 }

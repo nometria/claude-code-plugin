@@ -1,0 +1,61 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-hooks.json",
+  "description": "Nometria deployment automation hooks. Wires the scripts in this folder to the Claude Code hook lifecycle. ${CLAUDE_PLUGIN_ROOT} resolves to the installed plugin directory.",
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Skill|Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/security-gate.sh",
+            "description": "Runs an AI security scan before production deploys and blocks if the score is below 70."
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/auto-deploy-on-commit.sh",
+            "description": "Triggers a resync when a git commit is made in a Nometria project."
+          },
+          {
+            "type": "command",
+            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/pr-preview.sh",
+            "description": "Auto-deploys a staging preview when a PR is opened or a branch is pushed, and prints the preview URL."
+          },
+          {
+            "type": "command",
+            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/post-deploy-healthcheck.sh",
+            "description": "After a deploy, verifies the app serves HTTP 200 and rolls back after 3 failed checks."
+          }
+        ]
+      },
+      {
+        "matcher": "Edit|Write|MultiEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/live-preview-on-edit.sh",
+            "description": "Resyncs the staging preview after code edits so there is always a live URL (debounced)."
+          }
+        ]
+      }
+    ],
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "${CLAUDE_PLUGIN_ROOT}/hooks/cost-guardian.sh",
+            "description": "Lists running instances at session start and warns about idle ones to avoid surprise costs."
+          }
+        ]
+      }
+    ]
+  }
+}
